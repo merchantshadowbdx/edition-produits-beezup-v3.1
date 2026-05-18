@@ -28,7 +28,7 @@ def render():
 
     with st.container(border=True, key="edition_container"):
         st.subheader("✏️️ Intégration des données")
-        st.write("Importez vos templates complétés pour mettre à jour BeezUP.")
+        # st.write("Importez vos templates complétés pour mettre à jour BeezUP.")
 
         # accept_multiple_files=True retourne toujours une liste (vide si rien sélectionné)
         uploaded_files = st.file_uploader(

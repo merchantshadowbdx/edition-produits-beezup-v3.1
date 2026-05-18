@@ -26,7 +26,7 @@ def render():
 
     st.html("<style>.st-key-edition_container { box-shadow: 0px 2px 20px rgba(0, 0, 0, 0.5); }</style>")
 
-    with st.container(border=True, key="edition_container"):
+    with st.container(border=True, gap="medium", key="edition_container"):
         st.subheader("✏️️ Intégration des données")
         # st.write("Importez vos templates complétés pour mettre à jour BeezUP.")
 

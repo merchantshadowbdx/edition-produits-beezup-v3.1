@@ -138,7 +138,7 @@ def _display_results(results: dict):
     st.space("small")
     st.html("<style>.st-key-results_container { box-shadow: 0px 2px 20px rgba(0, 0, 0, 0.5); }</style>")
 
-    with st.container(border=True, key="results_container"):
+    with st.container(border=True, gap="medium", key="results_container"):
         st.subheader("📑 Résumé de l'analyse")
 
         for filename, data in results.items():

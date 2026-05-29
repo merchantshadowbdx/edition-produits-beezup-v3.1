@@ -100,6 +100,16 @@
     "title",
     "description"
   ],
+  "KIABFR": [
+    "ean",
+    "title_FRA",
+    "long_description_FRA",
+    "media_url_1",
+    "media_url_2",
+    "media_url_3",
+    "media_url_4",
+    "media_url_5"
+  ],
   "KINGGB": [],
   "LBCOFR": [],
   "MANODE": [

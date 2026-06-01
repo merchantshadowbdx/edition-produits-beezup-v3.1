@@ -55,11 +55,3 @@ def get_log_context():
     store_name = st.session_state.get("store_name") or "NoStore"
 
     return logger.bind(user=user_name, store=store_name)
-
-
-try:
-    from logtail import LogtailHandler
-
-    print("LogtailHandler importé avec succès")
-except ImportError as e:
-    print(f"Erreur import logtail : {e}")

@@ -7,6 +7,9 @@ import requests
 import streamlit as st
 from loguru import logger
 
+# Caractères invisibles parfois présents en tête/queue d'export (BOM, zero-width spaces...)
+_INVISIBLE_CHARS = "\ufeff\u200b\u200c\u200d\u00a0"
+
 
 def get_user_identity(client) -> dict[str, str]:
     """
@@ -332,10 +335,6 @@ def get_product_ids(
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def download_export_file(catalog_id: str) -> Optional[pd.DataFrame]:
-    """
-    Télécharge le fichier d'export BeezUP pour un catalogue donné.
-    L'URL d'export est publique et utilise le catalog_id comme identifiant.
-    """
     url = f"https://export2.beezup.com/v2/user/channelCatalogs/export/X/X/{catalog_id}"
     logger.info(f"Téléchargement de l'export BeezUP : {url}")
 
@@ -344,15 +343,77 @@ def download_export_file(catalog_id: str) -> Optional[pd.DataFrame]:
 
     if not response.content:
         raise ValueError(f"Le fichier d'export est vide (catalog_id={catalog_id}).")
-
+    
     encoding = response.encoding or response.apparent_encoding or "utf-8"
-    logger.debug(f"Encodage détecté : {encoding}")
+    if encoding.lower().replace("-", "") in ("utf8", "utf8sig"):
+        encoding = "utf-8-sig"
+    
+    text = response.content.decode(encoding, errors="replace").strip().strip(_INVISIBLE_CHARS).strip()
+    logger.debug(f"Encodage utilisé : {encoding}")
 
-    csv_text = response.content.decode(encoding)
-    df = pd.read_csv(StringIO(csv_text), sep=None, engine="python", on_bad_lines="warn")
+    if text.startswith("[") or text.startswith("{"):
+        df = _parse_json_export(text, catalog_id)
+    else:
+        sep = _detect_csv_separator(text.split("\n")[0])
+        df = pd.read_csv(StringIO(text), sep=sep, on_bad_lines="warn")
+
+        if len(df.columns) < 3:
+            logger.warning(
+                f"Export CSV suspect : seulement {len(df.columns)} colonne(s) détectée(s) "
+                f"(catalog_id={catalog_id}). Séparateur peut-être incorrect."
+            )
 
     logger.info(f"Export téléchargé : {len(df)} produits, {len(df.columns)} colonnes (catalog_id={catalog_id}).")
+    return df
 
+
+def _detect_csv_separator(first_line: str) -> str:
+    """
+    Détecte le séparateur le plus probable en comptant les occurrences
+    des candidats courants sur la première ligne du CSV.
+    """
+    candidates = {",": first_line.count(","), ";": first_line.count(";"), "\t": first_line.count("\t")}
+    sep = max(candidates, key=candidates.get)
+    logger.debug(f"Séparateur détecté : '{sep}' ({candidates})")
+    return sep
+
+
+def _parse_json_export(text: str, catalog_id: str) -> pd.DataFrame:
+    """
+    Normalise un export BeezUP au format JSON en DataFrame plat.
+
+    Structure attendue :
+    [
+      {
+        "sku": "...",
+        "messageType": "publish",
+        "properties": [{"key": "attr_code", "value": "val"}, ...]
+      },
+      ...
+    ]
+
+    Chaque propriété devient une colonne dans le DataFrame.
+    """
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Export non parseable (ni CSV ni JSON valide) pour catalog_id={catalog_id} : {e}")
+
+    if not isinstance(data, list):
+        raise ValueError(f"Format JSON inattendu (attendu : liste de produits) pour catalog_id={catalog_id}.")
+
+    records = []
+    for product in data:
+        row = {"sku": product.get("sku")}
+        for prop in product.get("properties", []):
+            key = prop.get("key")
+            value = prop.get("value")
+            if key:
+                row[key] = value
+        records.append(row)
+
+    df = pd.DataFrame(records)
+    logger.debug(f"_parse_json_export : {len(df)} produits normalisés depuis JSON.")
     return df
 
 

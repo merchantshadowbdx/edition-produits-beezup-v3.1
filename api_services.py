@@ -349,7 +349,7 @@ def download_export_file(catalog_id: str) -> Optional[pd.DataFrame]:
     logger.debug(f"Encodage détecté : {encoding}")
 
     csv_text = response.content.decode(encoding)
-    df = pd.read_csv(StringIO(csv_text), sep=None, engine="python")
+    df = pd.read_csv(StringIO(csv_text), sep=None, engine="python", on_bad_lines="warn")
 
     logger.info(f"Export téléchargé : {len(df)} produits, {len(df.columns)} colonnes (catalog_id={catalog_id}).")
 

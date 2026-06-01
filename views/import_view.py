@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 
 import pandas as pd
@@ -325,6 +326,9 @@ def _execute_overrides_with_progress(client, catalog_id: str, updates: list) -> 
             progress_bar.progress(int((i + 1) / total * 100))
             status_text.text(f"Mise à jour : {i + 1}/{total}")
 
+            # Throttle pour respecter la limite de requêtes/minute (100/min pour certains comptes)
+            time.sleep(0.8)
+    
     finally:
         progress_bar.empty()
         status_text.empty()
